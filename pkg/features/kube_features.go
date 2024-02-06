@@ -55,6 +55,11 @@ const (
 	//
 	// Enables Provisioning Admission Check Controller.
 	ProvisioningACC featuregate.Feature = "ProvisioningACC"
+
+	// owner: @andrewsykim
+	// kep: <TODO>
+	// alpha: v0.6
+	DynamicallySizedJobs featuregate.Feature = "DynamicallySizedJobs"
 )
 
 func init() {
@@ -68,10 +73,11 @@ func init() {
 // Entries are separated from each other with blank lines to avoid sweeping gofmt changes
 // when adding or removing one entry.
 var defaultFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	PartialAdmission:  {Default: true, PreRelease: featuregate.Beta},
-	QueueVisibility:   {Default: false, PreRelease: featuregate.Alpha},
-	FlavorFungibility: {Default: true, PreRelease: featuregate.Beta},
-	ProvisioningACC:   {Default: false, PreRelease: featuregate.Alpha},
+	PartialAdmission:     {Default: true, PreRelease: featuregate.Beta},
+	QueueVisibility:      {Default: false, PreRelease: featuregate.Alpha},
+	FlavorFungibility:    {Default: true, PreRelease: featuregate.Beta},
+	ProvisioningACC:      {Default: false, PreRelease: featuregate.Alpha},
+	DynamicallySizedJobs: {Default: false, PreRelease: featuregate.Alpha},
 }
 
 func SetFeatureGateDuringTest(tb testing.TB, f featuregate.Feature, value bool) func() {

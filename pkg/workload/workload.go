@@ -62,6 +62,15 @@ type Info struct {
 	Obj *kueue.Workload
 	// list of total resources requested by the podsets.
 	TotalRequests []PodSetResources
+
+	// List of total resources already admitted.
+	// Only applicable for resizeable jobs.
+	AdmittedRequests []PodSetResources
+
+	// List of total resources still pending.
+	// Only applicable for resizeable jobs.
+	PendingRequests []PodSetResources
+
 	// Populated from the queue during admission or from the admission field if
 	// already admitted.
 	ClusterQueue   string
@@ -92,12 +101,14 @@ func NewInfo(w *kueue.Workload) *Info {
 	info := &Info{
 		Obj: w,
 	}
+
+	info.TotalRequests = totalRequestsFromPodSets(w)
 	if w.Status.Admission != nil {
 		info.ClusterQueue = string(w.Status.Admission.ClusterQueue)
-		info.TotalRequests = totalRequestsFromAdmission(w)
-	} else {
-		info.TotalRequests = totalRequestsFromPodSets(w)
+		info.AdmittedRequests = totalRequestsFromAdmission(w)
+		info.PendingRequests = diffRequestsFromPodSets(w)
 	}
+
 	return info
 }
 
@@ -200,6 +211,45 @@ func totalRequestsFromAdmission(wl *kueue.Workload) []PodSetResources {
 		res = append(res, setRes)
 	}
 	return res
+}
+
+func diffRequestsFromPodSets(wl *kueue.Workload) []PodSetResources {
+	totalResources := totalRequestsFromPodSets(wl)
+	admittedResources := totalRequestsFromAdmission(wl)
+	pendingResources := make([]PodSetResources, len(totalResources))
+
+	for i, totalResource := range totalResources {
+		var matchedResource PodSetResources
+		// find the matching resource in admitted request.
+		for _, admittedResource := range admittedResources {
+			if admittedResource.Name == totalResource.Name {
+				matchedResource = admittedResource
+				break
+			}
+		}
+
+		diffRequests := Requests{}
+		for resourceName, value := range totalResource.Requests {
+			admittedValue, ok := matchedResource.Requests[resourceName]
+			if !ok {
+				return pendingResources
+			}
+			diff := value - admittedValue
+			if diff < 0 {
+				return pendingResources
+			}
+
+			diffRequests[resourceName] = diff
+		}
+
+		pendingResources[i] = PodSetResources{
+			Name:     totalResource.Name,
+			Count:    totalResource.Count,
+			Flavors:  totalResource.Flavors,
+			Requests: diffRequests,
+		}
+	}
+	return nil
 }
 
 // The following resources calculations are inspired on

@@ -486,7 +486,9 @@ func (r *JobReconciler) equivalentToWorkload(job GenericJob, object client.Objec
 
 	jobPodSets := resetMinCounts(job.PodSets())
 
-	if !workload.CanBePartiallyAdmitted(wl) || !workload.HasQuotaReservation(wl) {
+	// update below checks such that two pod sets that are not exactly equal can be continue to be reconciled.
+
+	if !features.Enabled(features.DynamicallySizedJobs) || !workload.CanBePartiallyAdmitted(wl) || !workload.HasQuotaReservation(wl) {
 		// the two sets should fully match.
 		return equality.ComparePodSetSlices(jobPodSets, wl.Spec.PodSets, true)
 	}
@@ -503,13 +505,16 @@ func (r *JobReconciler) equivalentToWorkload(job GenericJob, object client.Objec
 		return true
 	}
 
-	for i, psAssigment := range wl.Status.Admission.PodSetAssignments {
-		assignedCount := wl.Spec.PodSets[i].Count
-		if jobPodSets[i].MinCount != nil {
-			assignedCount = ptr.Deref(psAssigment.Count, assignedCount)
-		}
-		if jobPodSets[i].Count != assignedCount {
-			return false
+	// IF DynamicallySizedJobs is enabled, a mismatch in the podset count is considered "equal"
+	if !features.Enabled(features.DynamicallySizedJobs) {
+		for i, psAssigment := range wl.Status.Admission.PodSetAssignments {
+			assignedCount := wl.Spec.PodSets[i].Count
+			if jobPodSets[i].MinCount != nil {
+				assignedCount = ptr.Deref(psAssigment.Count, assignedCount)
+			}
+			if jobPodSets[i].Count != assignedCount {
+				return false
+			}
 		}
 	}
 	return true

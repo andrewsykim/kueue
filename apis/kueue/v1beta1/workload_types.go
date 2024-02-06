@@ -27,6 +27,7 @@ type WorkloadSpec struct {
 	// and a count.
 	// There must be at least one element and at most 8.
 	// podSets cannot be changed.
+	// If the DynamicallySizedJobs feauture gate is enabled, the pod of podsets can change.
 	//
 	// +listType=map
 	// +listMapKey=name

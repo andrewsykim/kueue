@@ -235,13 +235,18 @@ func lastAssignmentOutdated(wl *workload.Info, cq *cache.ClusterQueue) bool {
 // The result for each pod set is accompanied with reasons why the flavor can't
 // be assigned immediately. Each assigned flavor is accompanied with a
 // FlavorAssignmentMode.
-func AssignFlavors(log logr.Logger, wl *workload.Info, resourceFlavors map[kueue.ResourceFlavorReference]*kueue.ResourceFlavor, cq *cache.ClusterQueue, counts []int32) Assignment {
+func AssignFlavors(log logr.Logger, wl *workload.Info, resourceFlavors map[kueue.ResourceFlavorReference]*kueue.ResourceFlavor, cq *cache.ClusterQueue, counts []int32, resizeable bool) Assignment {
 	if wl.LastAssignment != nil && lastAssignmentOutdated(wl, cq) {
 		wl.LastAssignment = nil
 	}
 
+	requests := wl.TotalRequests
+	if resizeable {
+		requests = wl.PendingRequests
+	}
+
 	if len(counts) == 0 {
-		return assignFlavors(log, wl.TotalRequests, wl.Obj.Spec.PodSets, resourceFlavors, cq, wl.LastAssignment)
+		return assignFlavors(log, requests, wl.Obj.Spec.PodSets, resourceFlavors, cq, wl.LastAssignment)
 	}
 
 	currentResources := make([]workload.PodSetResources, len(wl.TotalRequests))
