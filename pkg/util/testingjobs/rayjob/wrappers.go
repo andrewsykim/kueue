@@ -112,6 +112,11 @@ func (j *JobWrapper) Queue(queue string) *JobWrapper {
 	return j
 }
 
+func (j *JobWrapper) SetAnnotation(key, content string) *JobWrapper {
+	j.Annotations[key] = content
+	return j
+}
+
 func (j *JobWrapper) RequestWorkerGroup(name corev1.ResourceName, quantity string) *JobWrapper {
 	c := &j.Spec.RayClusterSpec.WorkerGroupSpecs[0].Template.Spec.Containers[0]
 	if c.Resources.Requests == nil {
@@ -144,6 +149,11 @@ func (j *JobWrapper) ClusterSelector(value map[string]string) *JobWrapper {
 
 func (j *JobWrapper) WithEnableAutoscaling(value *bool) *JobWrapper {
 	j.Spec.RayClusterSpec.EnableInTreeAutoscaling = value
+	return j
+}
+
+func (j *JobWrapper) ScaleFirstWorkerGroup(replicas int32) *JobWrapper {
+	j.Spec.RayClusterSpec.WorkerGroupSpecs[0].Replicas = &replicas
 	return j
 }
 
